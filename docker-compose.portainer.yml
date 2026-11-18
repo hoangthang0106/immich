@@ -19,6 +19,10 @@ services:
       DB_PASSWORD: "${IMMICH_DB_PASSWORD:?Set IMMICH_DB_PASSWORD in Portainer}"
       REDIS_HOSTNAME: redis
     volumes:
+      # To use Proxmox storage hdd-backup-pt: first mount the actual HDD inside
+      # the Docker VM/LXC, migrate the existing /data, and set the Portainer
+      # IMMICH_UPLOAD_LOCATION env var. See IMMICH-HDD-BACKUP-PT.md.
+      # Never use an unmounted directory: Docker may create it on the root disk.
       - "${IMMICH_UPLOAD_LOCATION:-/srv/immich-18892/library}:/data"
       - /etc/localtime:/etc/localtime:ro
     depends_on:
