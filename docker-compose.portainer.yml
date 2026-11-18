@@ -1,0 +1,59 @@
+# Immich / Portainer Git Stack (LAN-only) — pinned official release v3.4.1.
+# No private IP, credentials or API tokens are committed.
+# REQUIRED Portainer stack environment variables: IMMICH_BIND_IP, IMMICH_DB_PASSWORD.
+# Do not use docker/docker-compose.prod.yml or the development compose for production.
+name: immich-private-18892
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:v3.4.1
+    restart: unless-stopped
+    ports:
+      # Only host port 18892, bound to the explicitly configured LAN IP.
+      - "${IMMICH_BIND_IP:?Set IMMICH_BIND_IP in Portainer}:18892:2283/tcp"
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      DB_HOSTNAME: database
+      DB_USERNAME: postgres
+      DB_DATABASE_NAME: immich
+      DB_PASSWORD: "${IMMICH_DB_PASSWORD:?Set IMMICH_DB_PASSWORD in Portainer}"
+      REDIS_HOSTNAME: redis
+    volumes:
+      - "${IMMICH_UPLOAD_LOCATION:-/srv/immich-18892/library}:/data"
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - database
+      - redis
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v3.4.1
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      MACHINE_LEARNING_MODEL_REVISION: v2
+    volumes:
+      - model-cache:/cache
+
+  redis:
+    image: docker.io/valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: "${IMMICH_DB_PASSWORD:?Set IMMICH_DB_PASSWORD in Portainer}"
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - "${IMMICH_DB_DATA_LOCATION:-/srv/immich-18892/postgres}:/var/lib/postgresql/data"
+    shm_size: 128mb
+
+volumes:
+  model-cache:
