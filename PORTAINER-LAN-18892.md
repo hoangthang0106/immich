@@ -1,6 +1,6 @@
 # Immich Private LAN — Git Stack Portainer, cổng 18892
 
-**Mục đích:** Portainer đọc trực tiếp file `docker-compose.portainer.yml` trong fork `hoangthang0106/immich`. Sau khi chỉnh file trên GitHub, chỉ cần **Pull and redeploy** trong Portainer. Không cần dán lại YAML vào Web editor.
+**Mục đích:** Portainer đọc trực tiếp file `docker-compose.portainer.yml` trong **nhánh chuyên dụng `portainer-18892`**, chỉ chứa 2 file thông thường, **không có symlink**. Nhánh `main` giữ nguyên mã nguồn Immich và có symbolic links khiến Portainer bản an toàn từ chối clone. Sau khi chỉnh file trên GitHub, chỉ cần **Pull and redeploy** trong Portainer. Không cần dán lại YAML vào Web editor.
 
 ## Cài lần đầu
 
@@ -9,7 +9,7 @@
 3. Portainer → **Stacks → Add stack → Repository / Git repository**:
    - **Name:** `immich-private-18892`
    - **Repository URL:** `https://github.com/hoangthang0106/immich`
-   - **Repository reference:** `refs/heads/main`
+   - **Repository reference:** `refs/heads/portainer-18892`
    - **Compose path:** `docker-compose.portainer.yml`
 4. Trong **Environment variables** của Stack, thiết lập duy nhất 2 biến bắt buộc:
    - `IMMICH_BIND_IP`: IP LAN thực tế của Docker host, không dùng `0.0.0.0`. Chỉ gán IP đã kiểm tra có trên interface của VM/LXC.
@@ -19,7 +19,7 @@
 
 ## Cập nhật về sau
 
-1. Chỉnh `docker-compose.portainer.yml` trong fork và commit lên `main`.
+1. Chỉnh `docker-compose.portainer.yml` trong nhánh **`portainer-18892`** của fork, không chỉnh nhánh `main`.
 2. Portainer → Stack `immich-private-18892` → **Pull and redeploy**. Portainer có thể hỗ trợ GitOps polling tùy phiên bản nhưng **không bật cập nhật Immich tự động không kiểm soát**.
 3. Trước khi nâng cấp Immich, **sao lưu database và thư viện ảnh**. Nâng `immich-server` và `immich-machine-learning` lên cùng tag stable mới. Xem release notes chính thức để biết yêu cầu migration.
 4. Không xóa thư mục `/srv/immich-18892` hoặc volumes khi redeploy. Nếu Immich đã chạy ở port 18892 từ bản cài cũ, **không tạo Stack thứ hai** dùng chung port và dữ liệu.
@@ -40,3 +40,11 @@
 - Cài Docker Compose: https://docs.immich.app/install/docker-compose/
 - Cài Portainer: https://docs.immich.app/install/portainer/
 - GitHub releases: https://github.com/immich-app/immich/releases
+
+## Khắc phục lỗi Portainer chặn symlink
+
+Portainer có thể báo `repository contains a symlink, which is not allowed for security reasons` nếu Git Stack trỏ tới `main` của fork Immich. **Không tắt bảo vệ symlink và không hạ cấp Portainer**. Trong Portainer đổi **Repository reference** sang `refs/heads/portainer-18892`, sau đó tạo Stack lại hoặc Pull/redeploy nếu UI cho sửa tham chiếu nhánh.
+
+Nhánh `portainer-18892` được tạo từ **một Git tree mới** chỉ có `docker-compose.portainer.yml` và `PORTAINER-LAN-18892.md`, cả hai là file text bình thường (mode `100644`). Lịch sử Git có quan hệ với `main` nhưng **worktree hiện tại không có symbolic link**. Portainer kiểm tra các file checkout của nhánh được chỉ định.
+
+**Lưu ý**: Vì repo vẫn Public, không đăng mật khẩu/token/IP cấu hình thật lên GitHub. Cấu hình bảo mật Portainer vẫn hoạt động; lỗi symlink không có nghĩa hệ thống bị tấn công.
